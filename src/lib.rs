@@ -1,7 +1,7 @@
+extern crate rayon;
 extern crate rug;
-extern crate crossbeam_utils;
 
-use crossbeam_utils::thread;
+use rayon::prelude::*;
 use rug::Integer;
 
 struct ProductTree {
@@ -54,19 +54,29 @@ fn merge_product_trees(mut trees: Vec<ProductTree>) -> ProductTree {
 
 fn compute_product_tree(moduli: &Vec<Integer>,
                         options: &ComputeOptions) -> ProductTree {
-    let child_trees: Vec<ProductTree> = thread::scope(|scope| {
-        moduli
-            .chunks(moduli.len() / options.thread_count)
-            .map(|chunk| {
-                scope.spawn(move |_| {
-                    compute_product_subtree(chunk.to_vec())
-                })
-            })
-            .map(|handle| handle.join().unwrap())
-            .collect()
-    }).unwrap();
+    let child_trees: Vec<ProductTree> = moduli
+        .par_chunks(moduli.len() / options.thread_count)
+        .enumerate()
+        .map(|(i, chunk)| {
+            if options.debug {
+                eprintln!("thread {}: compute product tree start", i);
+            }
+            let res = compute_product_subtree(chunk.to_vec());
+            if options.debug {
+                eprintln!("thread {}: compute product tree end", i);
+            }
+            return res;
+        })
+    .collect();
 
-    return merge_product_trees(child_trees);
+    if options.debug {
+        eprintln!("product tree merge start");
+    }
+    let res = merge_product_trees(child_trees);
+    if options.debug {
+        eprintln!("product tree merge end");
+    }
+    return res;
 }
 
 pub fn compute(moduli: &Vec<Integer>,
