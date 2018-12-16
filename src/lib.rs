@@ -26,11 +26,9 @@ fn compute_product_subtree(moduli: Vec<Integer>) -> ProductTree {
     }
 
     // Node
-    let level_len = moduli.len() / 2;
-    let mut level: Vec<Integer> = Vec::with_capacity(level_len);
-    for i in 0..level_len {
-        level.push(Integer::from(&moduli[i * 2] * &moduli[i * 2 + 1]));
-    }
+    let level = (0..(moduli.len() / 2)).map(|i| {
+        Integer::from(&moduli[i * 2] * &moduli[i * 2 + 1])
+    }).collect();
 
     let mut res = compute_product_subtree(level);
     res.levels.push(moduli);
