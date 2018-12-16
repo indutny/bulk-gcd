@@ -8,6 +8,11 @@ struct ProductTree {
     levels: Vec<Vec<Integer>>,
 }
 
+pub struct ComputeOptions {
+    pub thread_count: usize,
+    pub debug: bool,
+}
+
 fn compute_product_subtree(moduli: &Vec<Integer>) -> ProductTree {
     // Root
     if moduli.len() == 1 {
@@ -27,10 +32,10 @@ fn compute_product_subtree(moduli: &Vec<Integer>) -> ProductTree {
 }
 
 fn compute_product_tree(moduli: &Vec<Integer>,
-                        thread_count: usize) -> ProductTree {
+                        options: &ComputeOptions) -> ProductTree {
     let child_trees: Vec<ProductTree> = thread::scope(|scope| {
         moduli
-            .chunks(moduli.len() / thread_count)
+            .chunks(moduli.len() / options.thread_count)
             .map(|chunk| {
                 scope.spawn(move |_| {
                     compute_product_subtree(&chunk.to_vec())
@@ -44,10 +49,10 @@ fn compute_product_tree(moduli: &Vec<Integer>,
 }
 
 pub fn compute(moduli: &Vec<Integer>,
-               thread_count: usize) -> Vec<Option<Integer>> {
-    assert_eq!(moduli.len() % thread_count, 0);
+               options: &ComputeOptions) -> Vec<Option<Integer>> {
+    assert_eq!(moduli.len() % options.thread_count, 0);
 
-    let product_tree = compute_product_tree(moduli, thread_count);
+    let product_tree = compute_product_tree(moduli, options);
 
     Vec::new()
 }
