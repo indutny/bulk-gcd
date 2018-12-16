@@ -5,5 +5,4 @@ authors = ["Fedor Indutny <fedor@indutny.com>"]
 
 [dependencies]
 rayon = "1.0.3"
-num_cpus = "1.0"
 rug = "1.2.2"
