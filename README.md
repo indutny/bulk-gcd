@@ -59,7 +59,7 @@ You also need to declare it by adding this to your crate root (usually
 extern crate bulk_gcd;
 ```
 
-### Credits
+## Credits
 
 Huge thanks to [Michael Grunder][1] for helping me make threads work in Rust.
 
