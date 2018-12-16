@@ -44,7 +44,7 @@ fn main() {
         eprintln!("computing gcd");
     }
 
-    let result = bulk_gcd::compute(moduli, &options).unwrap();
+    let result = bulk_gcd::compute_with_opts(moduli, &options).unwrap();
     if result.len() == 0 {
         eprintln!("no results");
         std::process::exit(1);

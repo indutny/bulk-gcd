@@ -9,6 +9,11 @@ pub struct ComputeOptions {
     pub debug: bool,
 }
 
+#[derive(Debug)]
+pub enum ComputeError {
+    NotEnoughModuli,
+}
+
 struct ProductTree {
     levels: Vec<Vec<Integer>>,
 }
@@ -92,10 +97,11 @@ fn compute_gcds(remainders: &Vec<Integer>,
         .collect()
 }
 
-pub fn compute(mut moduli: Vec<Integer>, options: &ComputeOptions)
-    -> Result<Vec<Option<Integer>>, &str> {
+/// Same as `compute()`, but accepts additional compute options argument.
+pub fn compute_with_opts(mut moduli: Vec<Integer>, options: &ComputeOptions)
+    -> Result<Vec<Option<Integer>>, ComputeError> {
     if moduli.len() < 2 {
-        return Err("At least two moduli are required to run the algorithm");
+        return Err(ComputeError::NotEnoughModuli);
     }
 
     let original_len = moduli.len();
@@ -141,27 +147,58 @@ pub fn compute(mut moduli: Vec<Integer>, options: &ComputeOptions)
     }).collect())
 }
 
+/// Bulk-compute GCD of each modulo in moduli vec with the product of all other
+/// moduli in the same list.
+///
+/// This is an implementation of algorithm by [D. Bernstein][bernstein].
+///
+/// See: https://factorable.net/weakkeys12.conference.pdf for more details.
+///
+/// Usage example:
+/// ```rust
+/// extern crate bulk_gcd;
+/// extern crate rug;
+///
+/// use rug::Integer;
+///
+/// let moduli = vec![
+///     Integer::from(15),
+///     Integer::from(35),
+///     Integer::from(23),
+/// ];
+///
+/// let result = bulk_gcd::compute(moduli).unwrap();
+///
+/// assert_eq!(result, vec![
+///     Some(Integer::from(5)),
+///     Some(Integer::from(5)),
+///     None,
+/// ]);
+/// ```
+pub fn compute(moduli: Vec<Integer>)
+    -> Result<Vec<Option<Integer>>, ComputeError> {
+    compute_with_opts(moduli, &ComputeOptions { debug: false })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    const TEST_OPTIONS: ComputeOptions = ComputeOptions { debug: false };
-
     #[test]
     fn it_should_fail_on_zero_moduli() {
-        assert!(compute(vec![], &TEST_OPTIONS).is_err());
+        assert!(compute(vec![]).is_err());
     }
 
     #[test]
     fn it_should_fail_on_single_moduli() {
-        assert!(compute(vec![ Integer::new() ], &TEST_OPTIONS).is_err());
+        assert!(compute(vec![ Integer::new() ]).is_err());
     }
 
     #[test]
     fn it_should_return_gcd_of_two_moduli() {
         let moduli = vec![ Integer::from(6), Integer::from(15) ];
 
-        let result = compute(moduli, &TEST_OPTIONS).unwrap();
+        let result = compute(moduli).unwrap();
         assert_eq!(result, vec![
             Some(Integer::from(3)),
             Some(Integer::from(3)),
@@ -179,7 +216,7 @@ mod tests {
             Integer::from(131 * 151),
         ];
 
-        let result = compute(moduli, &TEST_OPTIONS).unwrap();
+        let result = compute(moduli).unwrap();
 
         assert_eq!(result, vec![
             Some(Integer::from(31 * 41)),
