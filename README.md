@@ -1,4 +1,5 @@
 # bulk-gcd
+[![Build Status](https://secure.travis-ci.org/indutny/bulk-gcd.svg)](http://travis-ci.org/indutny/bulk-gcd)
 
 Implementation of bulk GCD algorithm by [Bernstein][0]
 
