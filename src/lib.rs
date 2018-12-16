@@ -5,12 +5,19 @@ use rayon::prelude::*;
 use rug::ops::Pow;
 use rug::Integer;
 
+/// Computation options.
 pub struct ComputeOptions {
+    /// If `true` - debug information will be printed to stderr. Could be used
+    /// for monitoring progress
     pub debug: bool,
 }
 
+/// Possible computation errors
 #[derive(Debug)]
 pub enum ComputeError {
+    /// Returned when `compute()` (or `compute_with_opts()`) is called with
+    /// 0 or 1 moduli. Minimum 2 moduli are required for meaningful operation of
+    /// the function.
     NotEnoughModuli,
 }
 
