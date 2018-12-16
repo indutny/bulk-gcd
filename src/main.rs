@@ -1,28 +1,42 @@
 extern crate bulk_gcd;
 extern crate rug;
+extern crate clap;
 
 #[macro_use]
 extern crate log;
 extern crate env_logger;
 
 use std::fs;
-use std::env;
+use std::process::exit;
 use rug::Integer;
+use clap::{App,Arg};
 
 fn main() {
     env_logger::init();
 
-    let args: Vec<String> = env::args().collect();
+    let matches = App::with_defaults("bulk-gcd")
+        .version(clap::crate_version!())
+        .author(clap::crate_authors!("\n"))
+        .about("Compute bulk GCD of a list of hex RSA moduli")
+        .arg(Arg::with_name("INPUT")
+             .help(concat!(
+                     "Input file to use. Must contain hex values of moduli ",
+                     "separated by newline ('\\n')"))
+             .required(true)
+             .index(1))
+        .get_matches();
 
-    if args.len() != 2 {
-        println!("Usage: {} moduli.hex", &args[0]);
-        std::process::exit(1);
-    }
+    let input = matches.value_of("INPUT").unwrap();
+    trace!("reading file \"{}\"", &input);
 
-    trace!("reading file \"{}\"", &args[1]);
-
-    let binary_moduli = fs::read(&args[1])
-        .expect(&format!("Module file \"{}\" not found", args[1]));
+    let binary_moduli = match fs::read(&input) {
+        Ok(binary) => binary,
+        Err(err) => {
+            eprintln!("Failed to read \"{}\", due to error: \"{}\"",
+                      input, err);
+            exit(1);
+        },
+    };
 
     let str_moduli = String::from_utf8(binary_moduli).unwrap();
 
@@ -52,7 +66,7 @@ fn main() {
 
     if result.len() == 0 {
         eprintln!("no results");
-        std::process::exit(1);
+        exit(1);
     }
 
     result
