@@ -1,16 +1,13 @@
 extern crate rayon;
 extern crate rug;
 
+#[macro_use]
+extern crate log;
+extern crate env_logger;
+
 use rayon::prelude::*;
 use rug::ops::Pow;
 use rug::Integer;
-
-/// Computation options.
-pub struct ComputeOptions {
-    /// If `true` - debug information will be printed to stderr. Could be used
-    /// for monitoring progress
-    pub debug: bool,
-}
 
 /// Possible computation errors
 #[derive(Debug)]
@@ -49,12 +46,8 @@ fn compute_product_tree(moduli: Vec<Integer>) -> ProductTree {
     return res;
 }
 
-fn compute_remainders(tree: ProductTree,
-                      options: &ComputeOptions) -> RemainderResult {
-    if options.debug {
-        eprintln!("computing remainders");
-    }
-
+fn compute_remainders(tree: ProductTree) -> RemainderResult {
+    trace!("computing remainders");
     return tree.levels
         .into_iter()
         .fold(None, |acc, level| {
@@ -87,12 +80,8 @@ fn compute_remainders(tree: ProductTree,
 }
 
 fn compute_gcds(remainders: Vec<Integer>,
-                moduli: Vec<Integer>,
-                options: &ComputeOptions) -> Vec<Integer> {
-    if options.debug {
-        eprintln!("computing quotients and gcd");
-    }
-
+                moduli: Vec<Integer>) -> Vec<Integer> {
+    trace!("computing quotients and gcd");
     remainders
         .par_iter()
         .zip(moduli.par_iter())
@@ -101,56 +90,6 @@ fn compute_gcds(remainders: Vec<Integer>,
             quotient.gcd(modulo)
         })
         .collect()
-}
-
-/// Same as `compute()`, but accepts additional compute options argument.
-pub fn compute_with_opts(mut moduli: Vec<Integer>, options: &ComputeOptions)
-    -> Result<Vec<Option<Integer>>, ComputeError> {
-    if moduli.len() < 2 {
-        return Err(ComputeError::NotEnoughModuli);
-    }
-
-    let original_len = moduli.len();
-
-    // Pad to the power-of-two len
-    let mut pad_size: usize = 1;
-    loop {
-        if pad_size >= moduli.len() {
-            break;
-        }
-        pad_size <<= 1;
-    }
-    pad_size -= moduli.len();
-
-    if options.debug {
-        eprintln!("adding {} padding to moduli", pad_size);
-    }
-
-    for _ in 0..pad_size {
-        moduli.push(Integer::from(1));
-    }
-
-    if options.debug {
-        eprintln!("computing product tree");
-    }
-
-    let product_tree = compute_product_tree(moduli);
-    let remainder_result = compute_remainders(product_tree, options);
-    let mut gcds = compute_gcds(remainder_result.remainders.unwrap(),
-                                remainder_result.level,
-                                options);
-
-    // Remove padding
-    gcds.resize(original_len, Integer::from(0));
-
-    let one = Integer::from(1);
-    Ok(gcds.into_iter().map(|gcd| {
-        if gcd == one {
-            None
-        } else {
-            Some(gcd)
-        }
-    }).collect())
 }
 
 /// Bulk-compute GCD of each modulo in moduli vec with the product of all other
@@ -184,9 +123,48 @@ pub fn compute_with_opts(mut moduli: Vec<Integer>, options: &ComputeOptions)
 ///
 /// [bernstein]: https://cr.yp.to/factorization/smoothparts-20040510.pdf
 /// [that paper]: https://factorable.net/weakkeys12.conference.pdf
-pub fn compute(moduli: Vec<Integer>)
+pub fn compute(mut moduli: Vec<Integer>)
     -> Result<Vec<Option<Integer>>, ComputeError> {
-    compute_with_opts(moduli, &ComputeOptions { debug: false })
+    if moduli.len() < 2 {
+        return Err(ComputeError::NotEnoughModuli);
+    }
+
+    let original_len = moduli.len();
+
+    // Pad to the power-of-two len
+    let mut pad_size: usize = 1;
+    loop {
+        if pad_size >= moduli.len() {
+            break;
+        }
+        pad_size <<= 1;
+    }
+    pad_size -= moduli.len();
+
+    trace!("adding {} padding to moduli", pad_size);
+
+    for _ in 0..pad_size {
+        moduli.push(Integer::from(1));
+    }
+
+    trace!("computing product tree");
+
+    let product_tree = compute_product_tree(moduli);
+    let remainder_result = compute_remainders(product_tree);
+    let mut gcds = compute_gcds(remainder_result.remainders.unwrap(),
+                                remainder_result.level);
+
+    // Remove padding
+    gcds.resize(original_len, Integer::from(0));
+
+    let one = Integer::from(1);
+    Ok(gcds.into_iter().map(|gcd| {
+        if gcd == one {
+            None
+        } else {
+            Some(gcd)
+        }
+    }).collect())
 }
 
 #[cfg(test)]

@@ -1,37 +1,32 @@
 extern crate bulk_gcd;
 extern crate rug;
 
+#[macro_use]
+extern crate log;
+extern crate env_logger;
+
 use std::fs;
 use std::env;
 use rug::Integer;
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    env_logger::init();
 
-    let options = bulk_gcd::ComputeOptions {
-        debug: match env::var("DEBUG") {
-            Ok(val) => val == "on",
-            _ => false,
-        },
-    };
+    let args: Vec<String> = env::args().collect();
 
     if args.len() != 2 {
         println!("Usage: {} moduli.hex", &args[0]);
         std::process::exit(1);
     }
 
-    if options.debug {
-        eprintln!("reading file \"{}\"", &args[1]);
-    }
+    trace!("reading file \"{}\"", &args[1]);
 
     let binary_moduli = fs::read(&args[1])
         .expect(&format!("Module file \"{}\" not found", args[1]));
 
     let str_moduli = String::from_utf8(binary_moduli).unwrap();
 
-    if options.debug {
-        eprintln!("parsing moduli");
-    }
+    trace!("parsing moduli");
 
     let moduli: Vec<Integer> = str_moduli.split('\n')
         .filter(|line| line.len() != 0)
@@ -40,12 +35,10 @@ fn main() {
             Integer::from(parse_result)
         }).collect();
 
-    if options.debug {
-        eprintln!("computing gcd");
-    }
+    trace!("computing gcd");
 
     let result: Vec<(usize, Integer)> =
-        bulk_gcd::compute_with_opts(moduli, &options)
+        bulk_gcd::compute(moduli)
         .unwrap()
         .into_iter()
         .enumerate()
