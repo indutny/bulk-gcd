@@ -12,9 +12,8 @@ use rug::Integer;
 /// Possible computation errors
 #[derive(Debug)]
 pub enum ComputeError {
-    /// Returned when `compute()` (or `compute_with_opts()`) is called with
-    /// 0 or 1 moduli. Minimum 2 moduli are required for meaningful operation of
-    /// the function.
+    /// Returned when `compute()` is called with 0 or 1 moduli
+    /// Minimum 2 moduli are required for meaningful operation of the function.
     NotEnoughModuli,
 }
 

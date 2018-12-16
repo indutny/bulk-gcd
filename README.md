@@ -1,5 +1,8 @@
 # bulk-gcd
 [![Build Status](https://secure.travis-ci.org/indutny/bulk-gcd.svg)](http://travis-ci.org/indutny/bulk-gcd)
+[![Latest version](https://img.shields.io/crates/v/bulk-gcd.svg)](https://crates.io/crates/bulk-gcd)
+[![Documentation](https://docs.rs/bulk-gcd/badge.svg)](https://docs.rs/bulk-gcd)
+![License](https://img.shields.io/crates/l/bulk-gcd.svg)
 
 This package provides and implementation of bulk GCD (Greatest Common Divisor)
 algorithm by [D. Bernstein][bernstein].
