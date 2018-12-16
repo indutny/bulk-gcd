@@ -86,17 +86,16 @@ fn compute_remainders(tree: ProductTree,
         .unwrap();
 }
 
-fn compute_gcds(remainders: &Vec<Integer>,
-                moduli: &Vec<Integer>,
+fn compute_gcds(remainders: Vec<Integer>,
+                moduli: Vec<Integer>,
                 options: &ComputeOptions) -> Vec<Integer> {
     if options.debug {
         eprintln!("computing quotients and gcd");
     }
 
-    // TODO(indutny): parallelize this!
     remainders
-        .iter()
-        .zip(moduli)
+        .par_iter()
+        .zip(moduli.par_iter())
         .map(|(remainder, modulo)| {
             let quotient = Integer::from(remainder / modulo);
             quotient.gcd(modulo)
@@ -137,8 +136,8 @@ pub fn compute_with_opts(mut moduli: Vec<Integer>, options: &ComputeOptions)
 
     let product_tree = compute_product_tree(moduli);
     let remainder_result = compute_remainders(product_tree, options);
-    let mut gcds = compute_gcds(&remainder_result.remainders.unwrap(),
-                                &remainder_result.level,
+    let mut gcds = compute_gcds(remainder_result.remainders.unwrap(),
+                                remainder_result.level,
                                 options);
 
     // Remove padding
