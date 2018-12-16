@@ -67,3 +67,4 @@ Huge thanks to [Michael Grunder][1] for helping me make threads work in Rust.
 [that paper]: https://factorable.net/weakkeys12.conference.pdf
 [crates]: https://crates.io/crates/bulk-gcd
 [cargo doc]: https://doc.rust-lang.org/cargo/guide/dependencies.html
+[1]: https://github.com/michael-grunder
