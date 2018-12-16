@@ -9,7 +9,10 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     let options = bulk_gcd::ComputeOptions {
-        debug: true,
+        debug: match env::var("DEBUG") {
+            Ok(val) => val == "on",
+            _ => false,
+        },
     };
 
     if args.len() != 2 {
