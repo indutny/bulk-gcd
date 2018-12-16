@@ -44,7 +44,19 @@ fn main() {
         eprintln!("computing gcd");
     }
 
-    let result = bulk_gcd::compute_with_opts(moduli, &options).unwrap();
+    let result: Vec<(usize, Integer)> =
+        bulk_gcd::compute_with_opts(moduli, &options)
+        .unwrap()
+        .into_iter()
+        .enumerate()
+        .filter_map(|(i, opt)| {
+            match opt {
+                Some(gcd) => Some((i, gcd)),
+                None => None
+            }
+        })
+        .collect();
+
     if result.len() == 0 {
         eprintln!("no results");
         std::process::exit(1);
@@ -52,14 +64,7 @@ fn main() {
 
     result
         .iter()
-        .enumerate()
-        .for_each(|(i, maybe_gcd)| {
-            match maybe_gcd {
-                None => {
-                },
-                Some(gcd) => {
-                    println!("{},{}", i, gcd.to_string_radix(16));
-                }
-            };
+        .for_each(|(i, gcd)| {
+            println!("{},{}", i, gcd.to_string_radix(16));
         });
 }
