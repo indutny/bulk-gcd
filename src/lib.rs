@@ -92,8 +92,14 @@ fn compute_gcds(remainders: &Vec<Integer>,
         .collect()
 }
 
-pub fn compute(mut moduli: Vec<Integer>,
-               options: &ComputeOptions) -> Vec<Option<Integer>> {
+pub fn compute(mut moduli: Vec<Integer>, options: &ComputeOptions)
+    -> Result<Vec<Option<Integer>>, &str> {
+    if moduli.len() < 2 {
+        return Err("At least two moduli are required to run the algorithm");
+    }
+
+    let original_len = moduli.len();
+
     // Pad to the power-of-two len
     let mut pad_size: usize = 1;
     loop {
@@ -118,17 +124,70 @@ pub fn compute(mut moduli: Vec<Integer>,
 
     let product_tree = compute_product_tree(moduli);
     let remainder_result = compute_remainders(product_tree, options);
-    let gcds = compute_gcds(&remainder_result.remainders.unwrap(),
-                            &remainder_result.level,
-                            options);
+    let mut gcds = compute_gcds(&remainder_result.remainders.unwrap(),
+                                &remainder_result.level,
+                                options);
+
+    // Remove padding
+    gcds.resize(original_len, Integer::from(0));
 
     let one = Integer::from(1);
-
-    gcds.into_iter().map(|gcd| {
+    Ok(gcds.into_iter().map(|gcd| {
         if gcd == one {
             None
         } else {
             Some(gcd)
         }
-    }).collect()
+    }).collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TEST_OPTIONS: ComputeOptions = ComputeOptions { debug: false };
+
+    #[test]
+    fn it_should_fail_on_zero_moduli() {
+        assert!(compute(vec![], &TEST_OPTIONS).is_err());
+    }
+
+    #[test]
+    fn it_should_fail_on_single_moduli() {
+        assert!(compute(vec![ Integer::new() ], &TEST_OPTIONS).is_err());
+    }
+
+    #[test]
+    fn it_should_return_gcd_of_two_moduli() {
+        let moduli = vec![ Integer::from(6), Integer::from(15) ];
+
+        let result = compute(moduli, &TEST_OPTIONS).unwrap();
+        assert_eq!(result, vec![
+            Some(Integer::from(3)),
+            Some(Integer::from(3)),
+        ]);
+    }
+
+    #[test]
+    fn it_should_find_gcd_for_many_moduli() {
+        let moduli = vec![
+            Integer::from(31 * 41),
+            Integer::from(41),
+            Integer::from(61),
+            Integer::from(71 * 31),
+            Integer::from(101 * 131),
+            Integer::from(131 * 151),
+        ];
+
+        let result = compute(moduli, &TEST_OPTIONS).unwrap();
+
+        assert_eq!(result, vec![
+            Some(Integer::from(31 * 41)),
+            Some(Integer::from(41)),
+            None,
+            Some(Integer::from(31)),
+            Some(Integer::from(131)),
+            Some(Integer::from(131)),
+        ]);
+    }
 }
