@@ -13,6 +13,11 @@ struct ProductTree {
     levels: Vec<Vec<Integer>>,
 }
 
+struct RemainderResult {
+    remainders: Option<Vec<Integer>>,
+    level: Vec<Integer>,
+}
+
 fn compute_product_tree(moduli: Vec<Integer>) -> ProductTree {
     // Root
     if moduli.len() == 1 {
@@ -32,20 +37,41 @@ fn compute_product_tree(moduli: Vec<Integer>) -> ProductTree {
     return res;
 }
 
-fn compute_remainders(tree: &ProductTree,
-                      options: &ComputeOptions) -> Vec<Integer> {
+fn compute_remainders(tree: ProductTree,
+                      options: &ComputeOptions) -> RemainderResult {
     if options.debug {
         eprintln!("computing remainders");
     }
 
-    let root = tree.levels[0].clone();
-    return tree.levels[1..].iter().fold(root, |acc, curr| {
-        curr.par_iter().enumerate().map(|(i, value)| {
-            let parent = &acc[i / 2];
-            let square = Integer::from(value.pow(2));
-            return Integer::from(parent % square);
-        }).collect()
-    })
+    return tree.levels
+        .into_iter()
+        .fold(None, |acc, level| {
+            if acc.is_none() {
+                return Some(RemainderResult {
+                    remainders: None,
+                    level: level,
+                });
+            }
+
+            let last = acc.unwrap();
+
+            let previous_results = match last.remainders {
+                None => last.level,
+                Some(remainders) => remainders,
+            };
+
+            let remainders = level.par_iter().enumerate().map(|(i, value)| {
+                let parent = &previous_results[i / 2];
+                let square = Integer::from(value.pow(2));
+                return Integer::from(parent % square);
+            }).collect();
+
+            Some(RemainderResult {
+                remainders: Some(remainders),
+                level: level,
+            })
+        })
+        .unwrap();
 }
 
 fn compute_gcds(remainders: &Vec<Integer>,
@@ -91,9 +117,9 @@ pub fn compute(mut moduli: Vec<Integer>,
     }
 
     let product_tree = compute_product_tree(moduli);
-    let remainders = compute_remainders(&product_tree, options);
-    let gcds = compute_gcds(&remainders,
-                            product_tree.levels.last().unwrap(),
+    let remainder_result = compute_remainders(product_tree, options);
+    let gcds = compute_gcds(&remainder_result.remainders.unwrap(),
+                            &remainder_result.level,
                             options);
 
     let one = Integer::from(1);
