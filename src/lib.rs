@@ -159,7 +159,7 @@ pub fn compute_with_opts(mut moduli: Vec<Integer>, options: &ComputeOptions)
 ///
 /// This is an implementation of algorithm by [D. Bernstein][bernstein].
 ///
-/// See: https://factorable.net/weakkeys12.conference.pdf for more details.
+/// See: [this paper][that paper] for more details.
 ///
 /// Usage example:
 /// ```rust
@@ -182,6 +182,9 @@ pub fn compute_with_opts(mut moduli: Vec<Integer>, options: &ComputeOptions)
 ///     None,
 /// ]);
 /// ```
+///
+/// [bernstein]: https://cr.yp.to/factorization/smoothparts-20040510.pdf
+/// [that paper]: https://factorable.net/weakkeys12.conference.pdf
 pub fn compute(moduli: Vec<Integer>)
     -> Result<Vec<Option<Integer>>, ComputeError> {
     compute_with_opts(moduli, &ComputeOptions { debug: false })

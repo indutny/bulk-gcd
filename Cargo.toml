@@ -1,7 +1,8 @@
 [package]
-name = "bulk_gcd"
+name = "bulk-gcd"
 version = "0.1.0"
 authors = ["Fedor Indutny <fedor@indutny.com>"]
+repository = "https://github.com/indutny/bulk-gcd"
 
 [dependencies]
 rayon = "1.0.3"
