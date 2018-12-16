@@ -42,9 +42,28 @@ assert_eq!(result, vec![
 ]);
 ```
 
-## Credits
+## Using bulk-gcd
+
+`bulk-gcd` is available on [crates.io][crates]. To use `bulk-gcd` in your crate,
+add it as a dependency inside [Cargo.toml][cargo doc]:
+
+```
+[dependencies]
+bulk-gcd = "0.1"
+```
+
+You also need to declare it by adding this to your crate root (usually
+`lib.rs` or `main.rs`):
+
+```rust
+extern crate bulk_gcd;
+```
+
+#### Credits
 
 Huge thanks to [Michael Grunder][1] for helping me make threads work in Rust.
 
 [bernstein]: https://cr.yp.to/factorization/smoothparts-20040510.pdf
 [that paper]: https://factorable.net/weakkeys12.conference.pdf
+[crates]: https://crates.io/crates/bulk-gcd
+[cargo doc]: https://doc.rust-lang.org/cargo/guide/dependencies.html
