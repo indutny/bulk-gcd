@@ -49,7 +49,7 @@ add it as a dependency inside [Cargo.toml][cargo doc]:
 
 ```
 [dependencies]
-bulk-gcd = "0.1"
+bulk-gcd = "^1.0.0"
 ```
 
 You also need to declare it by adding this to your crate root (usually
