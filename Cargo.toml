@@ -18,4 +18,4 @@ default-features = false
 features = ["integer"]
 
 [badges]
-travis-ci = { repository = "serde-rs/serde" }
+travis-ci = { repository = "indutny/bulk-gcd" }
