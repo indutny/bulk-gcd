@@ -17,7 +17,7 @@ fn main() {
 
     if args.len() != 2 {
         println!("Usage: {} moduli.hex", &args[0]);
-        return;
+        std::process::exit(1);
     }
 
     if options.debug {
@@ -47,7 +47,7 @@ fn main() {
     let result = bulk_gcd::compute(moduli, &options);
     if result.len() == 0 {
         eprintln!("no results");
-        return;
+        std::process::exit(1);
     }
 
     result
