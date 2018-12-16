@@ -2,6 +2,7 @@ extern crate rayon;
 extern crate rug;
 
 use rayon::prelude::*;
+use rug::ops::Pow;
 use rug::Integer;
 
 pub struct ComputeOptions {
@@ -83,16 +84,30 @@ fn compute_product_forest(moduli: &Vec<Integer>,
 }
 
 fn compute_partial_remainders(tree: &ProductTree) -> Vec<Integer> {
-    return vec![];
+    let root = tree.levels[0].clone();
+    return tree.levels[1..].iter().fold(root, |acc, curr| {
+        curr.iter().enumerate().map(|(i, value)| {
+            let parent = &acc[i / 2];
+            let square = Integer::from(value.pow(2));
+            return Integer::from(parent % square);
+        }).collect()
+    })
 }
 
-fn compute_remainders(product_forest: ProductForest,
-                      options: &ComputeOptions) -> Vec<Integer> {
+fn compute_gcds(mut product_forest: ProductForest,
+                moduli: &Vec<Integer>,
+                options: &ComputeOptions) -> Vec<Integer> {
     if options.debug {
         eprintln!("compute remainders start");
     }
 
-    let tails: Vec<Integer> = product_forest.tails
+    let mut head = compute_partial_remainders(&product_forest.head);
+
+    product_forest.tails.iter_mut().for_each(|tail| {
+        tail.levels[0][0] = head.remove(0);
+    });
+
+    let remainders: Vec<Integer> = product_forest.tails
         .par_iter()
         .enumerate()
         .map(|(i, tree)| {
@@ -108,7 +123,19 @@ fn compute_remainders(product_forest: ProductForest,
         .flatten()
         .collect();
 
-    return vec![];
+    if options.debug {
+        eprintln!("computing quotients and gcd");
+    }
+
+    // TODO(indutny): parallelize this!
+    remainders
+        .iter()
+        .zip(moduli)
+        .map(|(remainder, modulo)| {
+            let quotient = Integer::from(remainder / modulo);
+            quotient.gcd(modulo)
+        })
+        .collect()
 }
 
 pub fn compute(moduli: &Vec<Integer>,
@@ -117,7 +144,15 @@ pub fn compute(moduli: &Vec<Integer>,
     assert_eq!(moduli.len() % options.thread_count, 0);
 
     let product_forest = compute_product_forest(moduli, options);
-    let remainders = compute_remainders(product_forest, options);
+    let gcds = compute_gcds(product_forest, moduli, options);
 
-    Vec::new()
+    let one = Integer::from(1);
+
+    gcds.into_iter().map(|gcd| {
+        if gcd == one {
+            None
+        } else {
+            Some(gcd)
+        }
+    }).collect()
 }

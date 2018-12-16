@@ -58,7 +58,19 @@ fn main() {
                 eprintln!("computing gcd");
             }
             let result = bulk_gcd::compute(&moduli, &options);
-            println!("{}", result.len());
+
+            result
+                .iter()
+                .enumerate()
+                .for_each(|(i, maybe_gcd)| {
+                    match maybe_gcd {
+                        None => {
+                        },
+                        Some(gcd) => {
+                            println!("{},{}", i, gcd.to_string_radix(16));
+                        }
+                    };
+                })
         }
         _ => {
             println!("Usage: {} moduli.hex", &args[0]);
