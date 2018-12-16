@@ -1,0 +1,9 @@
+[package]
+name = "bulk_gcd"
+version = "0.1.0"
+authors = ["Fedor Indutny <fedor@indutny.com>"]
+
+[dependencies]
+crossbeam-utils = "0.6.3"
+num_cpus = "1.0"
+rug = "1.2.2"
