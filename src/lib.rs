@@ -4,13 +4,18 @@ extern crate rug;
 use rayon::prelude::*;
 use rug::Integer;
 
+pub struct ComputeOptions {
+    pub thread_count: usize,
+    pub debug: bool,
+}
+
 struct ProductTree {
     levels: Vec<Vec<Integer>>,
 }
 
-pub struct ComputeOptions {
-    pub thread_count: usize,
-    pub debug: bool,
+struct ProductForest {
+    head: ProductTree,
+    tails: Vec<ProductTree>,
 }
 
 fn compute_product_subtree(moduli: Vec<Integer>) -> ProductTree {
@@ -31,7 +36,8 @@ fn compute_product_subtree(moduli: Vec<Integer>) -> ProductTree {
     return res;
 }
 
-fn merge_product_trees(mut trees: Vec<ProductTree>) -> ProductTree {
+fn merge_product_trees(mut trees: Vec<ProductTree>) -> ProductForest {
+
     let roots = trees.iter_mut().map(|tree| {
         assert!(tree.levels.len() > 0);
         assert_eq!(tree.levels[0].len(), 1);
@@ -39,21 +45,18 @@ fn merge_product_trees(mut trees: Vec<ProductTree>) -> ProductTree {
         tree.levels.remove(0)
     }).flatten().collect();
 
-    let mut head = compute_product_subtree(roots);
-
-    let child_levels = trees[0].levels.len();
-    for _ in 0..child_levels {
-        let merged_level = trees.iter_mut().map(|tree| {
-            tree.levels.remove(0)
-        }).flatten().collect();
-        head.levels.push(merged_level);
+    return ProductForest {
+        head: compute_product_subtree(roots),
+        tails: trees,
     }
-
-    return head;
 }
 
-fn compute_product_tree(moduli: &Vec<Integer>,
-                        options: &ComputeOptions) -> ProductTree {
+fn compute_product_forest(moduli: &Vec<Integer>,
+                          options: &ComputeOptions) -> ProductForest {
+    if options.debug {
+        eprintln!("compute product forest start");
+    }
+
     let child_trees: Vec<ProductTree> = moduli
         .par_chunks(moduli.len() / options.thread_count)
         .enumerate()
@@ -67,7 +70,7 @@ fn compute_product_tree(moduli: &Vec<Integer>,
             }
             return res;
         })
-    .collect();
+        .collect();
 
     if options.debug {
         eprintln!("product tree merge start");
@@ -79,12 +82,42 @@ fn compute_product_tree(moduli: &Vec<Integer>,
     return res;
 }
 
+fn compute_partial_remainders(tree: &ProductTree) -> Vec<Integer> {
+    return vec![];
+}
+
+fn compute_remainders(product_forest: ProductForest,
+                      options: &ComputeOptions) -> Vec<Integer> {
+    if options.debug {
+        eprintln!("compute remainders start");
+    }
+
+    let tails: Vec<Integer> = product_forest.tails
+        .par_iter()
+        .enumerate()
+        .map(|(i, tree)| {
+            if options.debug {
+                eprintln!("thread {}: compute partial remainders start", i);
+            }
+            let res = compute_partial_remainders(tree);
+            if options.debug {
+                eprintln!("thread {}: compute partial remainders end", i);
+            }
+            return res;
+        })
+        .flatten()
+        .collect();
+
+    return vec![];
+}
+
 pub fn compute(moduli: &Vec<Integer>,
                options: &ComputeOptions) -> Vec<Option<Integer>> {
     assert!(options.thread_count > 0);
     assert_eq!(moduli.len() % options.thread_count, 0);
 
-    let product_tree = compute_product_tree(moduli, options);
+    let product_forest = compute_product_forest(moduli, options);
+    let remainders = compute_remainders(product_forest, options);
 
     Vec::new()
 }
