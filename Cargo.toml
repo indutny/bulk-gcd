@@ -8,6 +8,7 @@ license = "MIT"
 keywords = ["bulk","gcd","fastgcd"]
 categories = ["cryptography"]
 readme = "README.md"
+exclude = [".travis.yml"]
 
 [dependencies]
 clap = "^2.32.0"
