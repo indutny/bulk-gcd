@@ -29,15 +29,15 @@ struct RemainderResult {
 fn compute_product_tree(moduli: Vec<Integer>) -> ProductTree {
     // Root
     if moduli.len() == 1 {
-        return ProductTree { levels: vec![ moduli ] }
+        return ProductTree {
+            levels: vec![moduli],
+        };
     }
 
     // Node
     let level = (0..(moduli.len() / 2))
         .into_par_iter()
-        .map(|i| {
-            Integer::from(&moduli[i * 2] * &moduli[i * 2 + 1])
-        })
+        .map(|i| Integer::from(&moduli[i * 2] * &moduli[i * 2 + 1]))
         .collect();
 
     let mut res = compute_product_tree(level);
@@ -64,11 +64,15 @@ fn compute_remainders(tree: ProductTree) -> RemainderResult {
                 Some(remainders) => remainders,
             };
 
-            let remainders = level.par_iter().enumerate().map(|(i, value)| {
-                let parent = &previous_results[i / 2];
-                let square = Integer::from(value.pow(2));
-                parent % square
-            }).collect();
+            let remainders = level
+                .par_iter()
+                .enumerate()
+                .map(|(i, value)| {
+                    let parent = &previous_results[i / 2];
+                    let square = Integer::from(value.pow(2));
+                    parent % square
+                })
+                .collect();
 
             Some(RemainderResult {
                 remainders: Some(remainders),
@@ -121,8 +125,7 @@ fn compute_gcds(remainders: &[Integer], moduli: &[Integer]) -> Vec<Integer> {
 ///
 /// [bernstein]: https://cr.yp.to/factorization/smoothparts-20040510.pdf
 /// [that paper]: https://factorable.net/weakkeys12.conference.pdf
-pub fn compute(mut moduli: Vec<Integer>)
-    -> Result<Vec<Option<Integer>>, ComputeError> {
+pub fn compute(mut moduli: Vec<Integer>) -> Result<Vec<Option<Integer>>, ComputeError> {
     if moduli.len() < 2 {
         return Err(ComputeError::NotEnoughModuli);
     }
@@ -149,20 +152,19 @@ pub fn compute(mut moduli: Vec<Integer>)
 
     let product_tree = compute_product_tree(moduli);
     let remainder_result = compute_remainders(product_tree);
-    let mut gcds = compute_gcds(&remainder_result.remainders.unwrap(),
-                                &remainder_result.level);
+    let mut gcds = compute_gcds(
+        &remainder_result.remainders.unwrap(),
+        &remainder_result.level,
+    );
 
     // Remove padding
     gcds.resize(original_len, Integer::from(0));
 
     let one = Integer::from(1);
-    Ok(gcds.into_iter().map(|gcd| {
-        if gcd == one {
-            None
-        } else {
-            Some(gcd)
-        }
-    }).collect())
+    Ok(gcds
+        .into_iter()
+        .map(|gcd| if gcd == one { None } else { Some(gcd) })
+        .collect())
 }
 
 #[cfg(test)]
@@ -176,18 +178,18 @@ mod tests {
 
     #[test]
     fn it_should_fail_on_single_moduli() {
-        assert!(compute(vec![ Integer::new() ]).is_err());
+        assert!(compute(vec![Integer::new()]).is_err());
     }
 
     #[test]
     fn it_should_return_gcd_of_two_moduli() {
-        let moduli = vec![ Integer::from(6), Integer::from(15) ];
+        let moduli = vec![Integer::from(6), Integer::from(15)];
 
         let result = compute(moduli).unwrap();
-        assert_eq!(result, vec![
-            Some(Integer::from(3)),
-            Some(Integer::from(3)),
-        ]);
+        assert_eq!(
+            result,
+            vec![Some(Integer::from(3)), Some(Integer::from(3)),]
+        );
     }
 
     #[test]
@@ -203,13 +205,16 @@ mod tests {
 
         let result = compute(moduli).unwrap();
 
-        assert_eq!(result, vec![
-            Some(Integer::from(31 * 41)),
-            Some(Integer::from(41)),
-            None,
-            Some(Integer::from(31)),
-            Some(Integer::from(131)),
-            Some(Integer::from(131)),
-        ]);
+        assert_eq!(
+            result,
+            vec![
+                Some(Integer::from(31 * 41)),
+                Some(Integer::from(41)),
+                None,
+                Some(Integer::from(31)),
+                Some(Integer::from(131)),
+                Some(Integer::from(131)),
+            ]
+        );
     }
 }
