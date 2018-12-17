@@ -42,18 +42,18 @@ fn compute_product_tree(moduli: Vec<Integer>) -> ProductTree {
 
     let mut res = compute_product_tree(level);
     res.levels.push(moduli);
-    return res;
+    res
 }
 
 fn compute_remainders(tree: ProductTree) -> RemainderResult {
     trace!("computing remainders");
-    return tree.levels
+    tree.levels
         .into_iter()
         .fold(None, |acc, level| {
             if acc.is_none() {
                 return Some(RemainderResult {
                     remainders: None,
-                    level: level,
+                    level,
                 });
             }
 
@@ -67,19 +67,18 @@ fn compute_remainders(tree: ProductTree) -> RemainderResult {
             let remainders = level.par_iter().enumerate().map(|(i, value)| {
                 let parent = &previous_results[i / 2];
                 let square = Integer::from(value.pow(2));
-                return Integer::from(parent % square);
+                parent % square
             }).collect();
 
             Some(RemainderResult {
                 remainders: Some(remainders),
-                level: level,
+                level,
             })
         })
-        .unwrap();
+        .unwrap()
 }
 
-fn compute_gcds(remainders: Vec<Integer>,
-                moduli: Vec<Integer>) -> Vec<Integer> {
+fn compute_gcds(remainders: &[Integer], moduli: &[Integer]) -> Vec<Integer> {
     trace!("computing quotients and gcd");
     remainders
         .par_iter()
@@ -150,8 +149,8 @@ pub fn compute(mut moduli: Vec<Integer>)
 
     let product_tree = compute_product_tree(moduli);
     let remainder_result = compute_remainders(product_tree);
-    let mut gcds = compute_gcds(remainder_result.remainders.unwrap(),
-                                remainder_result.level);
+    let mut gcds = compute_gcds(&remainder_result.remainders.unwrap(),
+                                &remainder_result.level);
 
     // Remove padding
     gcds.resize(original_len, Integer::from(0));

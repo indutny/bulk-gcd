@@ -43,7 +43,7 @@ fn main() {
     trace!("parsing moduli");
 
     let moduli: Vec<Integer> = str_moduli.split('\n')
-        .filter(|line| line.len() != 0)
+        .filter(|line| !line.is_empty())
         .map(|line| {
             let parse_result = Integer::parse_radix(line, 16).unwrap();
             Integer::from(parse_result)
@@ -64,7 +64,7 @@ fn main() {
         })
         .collect();
 
-    if result.len() == 0 {
+    if result.is_empty() {
         eprintln!("no results");
         exit(1);
     }
