@@ -1,3 +1,8 @@
+//! # bulk-gcd
+//!
+//! This package provides and implementation of bulk GCD
+//! (Greatest Common Divisor).
+//!
 extern crate rayon;
 extern crate rug;
 
