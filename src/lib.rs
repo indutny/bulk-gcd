@@ -1,8 +1,38 @@
 //! # bulk-gcd
 //!
-//! This package provides and implementation of bulk GCD
-//! (Greatest Common Divisor).
+//! This crate computes GCD of each integer in moduli list with the product of
+//! all integers in the same list using [fast algorithm][bernstein] by
+//! D. Bernstein.
 //!
+//! See: [this paper][that paper] for more details and motivation.
+//!
+//! Usage example:
+//! ```rust
+//! extern crate bulk_gcd;
+//! extern crate rug;
+//!
+//! use rug::Integer;
+//!
+//! let moduli = vec![
+//!     Integer::from(15),
+//!     Integer::from(35),
+//!     Integer::from(23),
+//! ];
+//!
+//! let result = bulk_gcd::compute(moduli).unwrap();
+//!
+//! assert_eq!(
+//!     result,
+//!     vec![
+//!         Some(Integer::from(5)),
+//!         Some(Integer::from(5)),
+//!         None,
+//!     ]
+//! );
+//! ```
+//!
+//! [bernstein]: https://cr.yp.to/factorization/smoothparts-20040510.pdf
+//! [that paper]: https://factorable.net/weakkeys12.conference.pdf
 extern crate rayon;
 extern crate rug;
 
@@ -15,7 +45,7 @@ use rug::ops::Pow;
 use rug::Integer;
 
 /// Possible computation errors
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ComputeError {
     /// Returned when `compute()` is called with 0 or 1 moduli
     /// Minimum 2 moduli are required for meaningful operation of the function.
@@ -99,12 +129,7 @@ fn compute_gcds(remainders: &[Integer], moduli: &[Integer]) -> Vec<Integer> {
         .collect()
 }
 
-/// Bulk-compute GCD of each modulo in moduli vec with the product of all other
-/// moduli in the same list.
-///
-/// This is an implementation of algorithm by [D. Bernstein][bernstein].
-///
-/// See: [this paper][that paper] for more details.
+/// Compute GCD of each integer in the `moduli` with all other integers in it.
 ///
 /// Usage example:
 /// ```rust
@@ -117,19 +142,37 @@ fn compute_gcds(remainders: &[Integer], moduli: &[Integer]) -> Vec<Integer> {
 ///     Integer::from(15),
 ///     Integer::from(35),
 ///     Integer::from(23),
+///     Integer::from(49),
 /// ];
 ///
 /// let result = bulk_gcd::compute(moduli).unwrap();
 ///
-/// assert_eq!(result, vec![
-///     Some(Integer::from(5)),
-///     Some(Integer::from(5)),
-///     None,
-/// ]);
+/// assert_eq!(
+///     result,
+///     vec![
+///         Some(Integer::from(5)),
+///         Some(Integer::from(35)),
+///         None,
+///         Some(Integer::from(7)),
+///     ]
+/// );
 /// ```
 ///
-/// [bernstein]: https://cr.yp.to/factorization/smoothparts-20040510.pdf
-/// [that paper]: https://factorable.net/weakkeys12.conference.pdf
+/// NOTE: Minimum 2 `moduli` are required for running the algorithm, otherwise
+/// `NotEnoughModuli` error is returned:
+///
+/// ```rust
+/// extern crate bulk_gcd;
+/// extern crate rug;
+///
+/// use rug::Integer;
+///
+/// assert_eq!(
+///     bulk_gcd::compute(vec![]).unwrap_err(),
+///     bulk_gcd::ComputeError::NotEnoughModuli
+/// );
+/// ```
+///
 pub fn compute(mut moduli: Vec<Integer>) -> Result<Vec<Option<Integer>>, ComputeError> {
     if moduli.len() < 2 {
         return Err(ComputeError::NotEnoughModuli);
