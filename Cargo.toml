@@ -1,7 +1,7 @@
 [package]
 name = "bulk-gcd"
 description = "Fast parallel bulk GCD computation for finding weak RSA keys in a set"
-version = "1.0.4"
+version = "1.0.5"
 authors = ["Fedor Indutny <fedor@indutny.com>"]
 repository = "https://github.com/indutny/bulk-gcd"
 license = "MIT"
