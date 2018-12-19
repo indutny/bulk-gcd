@@ -81,10 +81,11 @@ fn compute_product_tree(moduli: Vec<Integer>) -> ProductTree {
 }
 
 fn compute_remainders(tree: ProductTree) -> RemainderResult {
-    trace!("computing remainders for {} levels", tree.levels.len());
+    trace!("computing remainders for {} levels", tree.levels.len() - 1);
     tree.levels
         .into_iter()
-        .fold(None, |acc, level| {
+        .enumerate()
+        .fold(None, |acc, (i, level)| {
             if acc.is_none() {
                 return Some(RemainderResult {
                     remainders: None,
@@ -92,7 +93,7 @@ fn compute_remainders(tree: ProductTree) -> RemainderResult {
                 });
             }
 
-            trace!("computing next remainder level");
+            trace!("computing remainder level {}", i);
             let last = acc.unwrap();
 
             let previous_results = match last.remainders {
