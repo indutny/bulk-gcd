@@ -192,7 +192,6 @@ pub fn compute(moduli: Vec<Integer>) -> Result<Vec<Option<Integer>>, ComputeErro
     let product_tree = compute_product_tree(padded_moduli);
     let remainder_result = compute_remainders(product_tree);
 
-    // TODO(indutny): remove padding before computing GCD
     let gcds = compute_gcds(
         &unpad_ints(remainder_result.remainders.unwrap(), pad_size),
         &unpad_ints(remainder_result.level, pad_size),
