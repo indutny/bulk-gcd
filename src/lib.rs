@@ -40,9 +40,12 @@ extern crate rug;
 extern crate log;
 extern crate env_logger;
 
+mod utils;
+
 use rayon::prelude::*;
 use rug::ops::Pow;
 use rug::Integer;
+use utils::*;
 
 /// Possible computation errors
 #[derive(Debug, PartialEq)]
@@ -176,45 +179,24 @@ fn compute_gcds(remainders: &[Integer], moduli: &[Integer]) -> Vec<Integer> {
 /// );
 /// ```
 ///
-pub fn compute(mut moduli: Vec<Integer>) -> Result<Vec<Option<Integer>>, ComputeError> {
+pub fn compute(moduli: Vec<Integer>) -> Result<Vec<Option<Integer>>, ComputeError> {
     if moduli.len() < 2 {
         return Err(ComputeError::NotEnoughModuli);
     }
 
     // Pad to the power-of-two len
-    let mut pad_size: usize = 1;
-    loop {
-        if pad_size >= moduli.len() {
-            break;
-        }
-        pad_size <<= 1;
-    }
-    pad_size -= moduli.len();
-
-    // NOTE: insert moduli evenly through the list to make tree more balanced
-    trace!("adding {} padding to moduli", pad_size);
-    moduli.reserve(pad_size);
-    for i in (0..pad_size).rev() {
-        moduli.insert(i, Integer::from(1));
-    }
+    let (padded_moduli, pad_size) = pad_ints(moduli);
 
     trace!("computing product tree");
 
-    let product_tree = compute_product_tree(moduli);
+    let product_tree = compute_product_tree(padded_moduli);
     let remainder_result = compute_remainders(product_tree);
 
     // TODO(indutny): remove padding before computing GCD
-    let mut gcds = compute_gcds(
-        &remainder_result.remainders.unwrap(),
-        &remainder_result.level,
+    let gcds = compute_gcds(
+        &unpad_ints(remainder_result.remainders.unwrap(), pad_size),
+        &unpad_ints(remainder_result.level, pad_size),
     );
-
-    // Remove paddings
-    trace!("removing {} padding from gcd", pad_size);
-    for i in (0..pad_size).rev() {
-        debug_assert_eq!(gcds[i * 2], Integer::from(1));
-        gcds.remove(i * 2);
-    }
 
     let one = Integer::from(1);
     Ok(gcds
