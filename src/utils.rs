@@ -46,8 +46,7 @@ pub fn unpad_ints(list: Vec<Integer>, pad_size: usize) -> Vec<Integer> {
     let unpad_every = list.len() / pad_size;
     let mut pad_left = pad_size;
 
-    list
-        .into_iter()
+    list.into_iter()
         .enumerate()
         .filter_map(|(i, elem)| {
             if i % unpad_every == 0 && pad_left != 0 {
