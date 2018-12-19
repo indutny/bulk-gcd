@@ -12,7 +12,6 @@ pub fn pad_ints(list: Vec<Integer>) -> (Vec<Integer>, usize) {
         desired_size <<= 1;
     }
     let pad_size = desired_size - list.len();
-    trace!("adding {} padding to moduli", pad_size);
 
     if pad_size == 0 {
         return (list, pad_size);

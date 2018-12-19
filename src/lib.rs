@@ -186,6 +186,7 @@ pub fn compute(moduli: Vec<Integer>) -> Result<Vec<Option<Integer>>, ComputeErro
 
     // Pad to the power-of-two len
     let (padded_moduli, pad_size) = pad_ints(moduli);
+    trace!("added {} padding to moduli", pad_size);
 
     trace!("computing product tree");
 
