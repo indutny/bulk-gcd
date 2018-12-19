@@ -181,8 +181,6 @@ pub fn compute(mut moduli: Vec<Integer>) -> Result<Vec<Option<Integer>>, Compute
         return Err(ComputeError::NotEnoughModuli);
     }
 
-    let original_len = moduli.len();
-
     // Pad to the power-of-two len
     let mut pad_size: usize = 1;
     loop {
@@ -193,23 +191,30 @@ pub fn compute(mut moduli: Vec<Integer>) -> Result<Vec<Option<Integer>>, Compute
     }
     pad_size -= moduli.len();
 
+    // NOTE: insert moduli evenly through the list to make tree more balanced
     trace!("adding {} padding to moduli", pad_size);
-
-    for _ in 0..pad_size {
-        moduli.push(Integer::from(1));
+    moduli.reserve(pad_size);
+    for i in (0..pad_size).rev() {
+        moduli.insert(i, Integer::from(1));
     }
 
     trace!("computing product tree");
 
     let product_tree = compute_product_tree(moduli);
     let remainder_result = compute_remainders(product_tree);
+
+    // TODO(indutny): remove padding before computing GCD
     let mut gcds = compute_gcds(
         &remainder_result.remainders.unwrap(),
         &remainder_result.level,
     );
 
-    // Remove padding
-    gcds.resize(original_len, Integer::from(0));
+    // Remove paddings
+    trace!("removing {} padding from gcd", pad_size);
+    for i in (0..pad_size).rev() {
+        debug_assert_eq!(gcds[i * 2], Integer::from(1));
+        gcds.remove(i * 2);
+    }
 
     let one = Integer::from(1);
     Ok(gcds
