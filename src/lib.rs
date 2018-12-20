@@ -13,7 +13,7 @@
 //!
 //! use rug::Integer;
 //!
-//! let moduli = vec![
+//! let moduli = [
 //!     Integer::from(15),
 //!     Integer::from(35),
 //!     Integer::from(23),
@@ -128,7 +128,7 @@ fn compute_gcds(remainders: &[Integer], moduli: &[Integer]) -> Vec<Integer> {
 ///
 /// use rug::Integer;
 ///
-/// let moduli = vec![
+/// let moduli = [
 ///     Integer::from(15),
 ///     Integer::from(35),
 ///     Integer::from(23),
@@ -158,18 +158,18 @@ fn compute_gcds(remainders: &[Integer], moduli: &[Integer]) -> Vec<Integer> {
 /// use rug::Integer;
 ///
 /// assert_eq!(
-///     bulk_gcd::compute(&vec![]).unwrap_err(),
+///     bulk_gcd::compute(&[]).unwrap_err(),
 ///     bulk_gcd::ComputeError::NotEnoughModuli
 /// );
 /// ```
 ///
-pub fn compute(moduli: &Vec<Integer>) -> Result<Vec<Option<Integer>>, ComputeError> {
+pub fn compute(moduli: &[Integer]) -> Result<Vec<Option<Integer>>, ComputeError> {
     if moduli.len() < 2 {
         return Err(ComputeError::NotEnoughModuli);
     }
 
     // Pad to the power-of-two len
-    let (padded_moduli, pad_size) = pad_ints(moduli.clone());
+    let (padded_moduli, pad_size) = pad_ints(moduli.to_vec());
     trace!("added {} padding to moduli", pad_size);
 
     trace!("computing product tree");
@@ -190,17 +190,17 @@ mod tests {
 
     #[test]
     fn it_should_fail_on_zero_moduli() {
-        assert!(compute(&vec![]).is_err());
+        assert!(compute(&[]).is_err());
     }
 
     #[test]
     fn it_should_fail_on_single_moduli() {
-        assert!(compute(&vec![Integer::new()]).is_err());
+        assert!(compute(&[Integer::new()]).is_err());
     }
 
     #[test]
     fn it_should_return_gcd_of_two_moduli() {
-        let moduli = vec![Integer::from(6), Integer::from(15)];
+        let moduli = [Integer::from(6), Integer::from(15)];
 
         let result = compute(&moduli).unwrap();
         assert_eq!(
