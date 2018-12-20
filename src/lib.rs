@@ -19,7 +19,7 @@
 //!     Integer::from(23),
 //! ];
 //!
-//! let result = bulk_gcd::compute(moduli).unwrap();
+//! let result = bulk_gcd::compute(&moduli).unwrap();
 //!
 //! assert_eq!(
 //!     result,
@@ -58,11 +58,6 @@ struct ProductTree {
     levels: Vec<Vec<Integer>>,
 }
 
-struct RemainderResult {
-    remainders: Option<Vec<Integer>>,
-    level: Vec<Integer>,
-}
-
 fn compute_product_tree(moduli: Vec<Integer>) -> ProductTree {
     // Root
     if moduli.len() == 1 {
@@ -82,44 +77,34 @@ fn compute_product_tree(moduli: Vec<Integer>) -> ProductTree {
     res
 }
 
-fn compute_remainders(tree: ProductTree) -> RemainderResult {
+fn compute_remainders(tree: ProductTree) -> Option<Vec<Integer>> {
     let level_count = tree.levels.len() - 1;
     trace!("computing remainders for {} levels", level_count);
+
     tree.levels
         .into_iter()
         .enumerate()
-        .fold(None, |acc, (i, level)| {
-            if acc.is_none() {
-                return Some(RemainderResult {
-                    remainders: None,
-                    level,
-                });
+        .fold(None, |maybe_parent, (level, current)| {
+            if maybe_parent.is_none() {
+                return Some(current);
             }
 
-            trace!("computing remainder level {}/{}", i, level_count);
-            let last = acc.unwrap();
+            let parent = maybe_parent.unwrap();
 
-            let previous_results = match last.remainders {
-                None => last.level,
-                Some(remainders) => remainders,
-            };
-
-            let remainders = level
-                .par_iter()
+            trace!("computing remainder level {}/{}", level, level_count);
+            let remainders = current
+                .into_par_iter()
                 .enumerate()
-                .map(|(i, value)| {
-                    let parent = &previous_results[i / 2];
-                    let square = Integer::from(value.square_ref());
-                    parent % square
+                .map(|(i, mut value)| {
+                    // value = parent[i / 2] % (value ** 2)
+                    value.square_mut();
+
+                    &parent[i / 2] % value
                 })
                 .collect();
 
-            Some(RemainderResult {
-                remainders: Some(remainders),
-                level,
-            })
+            Some(remainders)
         })
-        .unwrap()
 }
 
 fn compute_gcds(remainders: &[Integer], moduli: &[Integer]) -> Vec<Integer> {
@@ -150,7 +135,7 @@ fn compute_gcds(remainders: &[Integer], moduli: &[Integer]) -> Vec<Integer> {
 ///     Integer::from(49),
 /// ];
 ///
-/// let result = bulk_gcd::compute(moduli).unwrap();
+/// let result = bulk_gcd::compute(&moduli).unwrap();
 ///
 /// assert_eq!(
 ///     result,
@@ -173,28 +158,27 @@ fn compute_gcds(remainders: &[Integer], moduli: &[Integer]) -> Vec<Integer> {
 /// use rug::Integer;
 ///
 /// assert_eq!(
-///     bulk_gcd::compute(vec![]).unwrap_err(),
+///     bulk_gcd::compute(&vec![]).unwrap_err(),
 ///     bulk_gcd::ComputeError::NotEnoughModuli
 /// );
 /// ```
 ///
-pub fn compute(moduli: Vec<Integer>) -> Result<Vec<Option<Integer>>, ComputeError> {
+pub fn compute(moduli: &Vec<Integer>) -> Result<Vec<Option<Integer>>, ComputeError> {
     if moduli.len() < 2 {
         return Err(ComputeError::NotEnoughModuli);
     }
 
     // Pad to the power-of-two len
-    let (padded_moduli, pad_size) = pad_ints(moduli);
+    let (padded_moduli, pad_size) = pad_ints(moduli.clone());
     trace!("added {} padding to moduli", pad_size);
 
     trace!("computing product tree");
-
-    let product_tree = compute_product_tree(padded_moduli);
-    let remainder_result = compute_remainders(product_tree);
+    let tree = compute_product_tree(padded_moduli);
+    let remainders = compute_remainders(tree);
 
     let gcds = compute_gcds(
-        &unpad_ints(remainder_result.remainders.unwrap(), pad_size),
-        &unpad_ints(remainder_result.level, pad_size),
+        &unpad_ints(remainders.unwrap(), pad_size),
+        moduli,
     );
 
     let one = Integer::from(1);
@@ -210,19 +194,19 @@ mod tests {
 
     #[test]
     fn it_should_fail_on_zero_moduli() {
-        assert!(compute(vec![]).is_err());
+        assert!(compute(&vec![]).is_err());
     }
 
     #[test]
     fn it_should_fail_on_single_moduli() {
-        assert!(compute(vec![Integer::new()]).is_err());
+        assert!(compute(&vec![Integer::new()]).is_err());
     }
 
     #[test]
     fn it_should_return_gcd_of_two_moduli() {
         let moduli = vec![Integer::from(6), Integer::from(15)];
 
-        let result = compute(moduli).unwrap();
+        let result = compute(&moduli).unwrap();
         assert_eq!(
             result,
             vec![Some(Integer::from(3)), Some(Integer::from(3)),]
@@ -240,7 +224,7 @@ mod tests {
             Integer::from(131 * 151),
         ];
 
-        let result = compute(moduli).unwrap();
+        let result = compute(&moduli).unwrap();
 
         assert_eq!(
             result,

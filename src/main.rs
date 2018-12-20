@@ -55,7 +55,7 @@ fn main() {
 
     trace!("computing gcd");
 
-    let result: Vec<(usize, Integer)> = bulk_gcd::compute(moduli)
+    let result: Vec<(usize, Integer)> = bulk_gcd::compute(&moduli)
         .unwrap()
         .into_iter()
         .enumerate()
