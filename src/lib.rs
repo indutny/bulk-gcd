@@ -88,7 +88,7 @@ fn compute_remainders(tree: ProductTree) -> Option<Vec<Integer>> {
             let parent = match maybe_parent {
                 None => {
                     return Some(current);
-                },
+                }
                 Some(parent) => parent,
             };
 
