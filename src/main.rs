@@ -32,20 +32,18 @@ fn main() {
     let input = matches.value_of("INPUT").unwrap();
     trace!("reading file \"{}\"", &input);
 
-    let binary_moduli = match fs::read(&input) {
-        Ok(binary) => binary,
+    let str_moduli = match fs::read_to_string(&input) {
+        Ok(value) => value,
         Err(err) => {
             eprintln!("Failed to read \"{}\", due to error: \"{}\"", input, err);
             exit(1);
         }
     };
 
-    let str_moduli = String::from_utf8(binary_moduli).unwrap();
-
     trace!("parsing moduli");
 
     let moduli: Vec<Integer> = str_moduli
-        .split('\n')
+        .lines()
         .filter(|line| !line.is_empty())
         .map(|line| {
             let parse_result = Integer::parse_radix(line, 16).unwrap();
