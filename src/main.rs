@@ -8,7 +8,9 @@ extern crate env_logger;
 
 use clap::{App, Arg};
 use rug::Integer;
-use std::fs;
+use std::fs::File;
+use std::io::prelude::*;
+use std::io::BufReader;
 use std::process::exit;
 
 fn main() {
@@ -30,21 +32,36 @@ fn main() {
         .get_matches();
 
     let input = matches.value_of("INPUT").unwrap();
-    trace!("reading file \"{}\"", &input);
+    trace!("opening file \"{}\"", &input);
 
-    let str_moduli = match fs::read_to_string(&input) {
-        Ok(value) => value,
+    let reader = match File::open(&input) {
+        Ok(f) => BufReader::new(f),
         Err(err) => {
-            eprintln!("Failed to read \"{}\", due to error: \"{}\"", input, err);
+            eprintln!("Failed to open \"{}\", due to error: \"{}\"", input, err);
             exit(1);
         }
     };
 
-    trace!("parsing moduli");
+    trace!("reading and parsing moduli");
 
-    let moduli: Vec<Integer> = str_moduli
+    let moduli: Vec<Integer> = reader
         .lines()
-        .filter(|line| !line.is_empty())
+        .filter_map(|maybe_line| match maybe_line {
+            Ok(line) => {
+                if line.is_empty() {
+                    None
+                } else {
+                    Some(line)
+                }
+            }
+            Err(err) => {
+                eprintln!(
+                    "Failed to read line from \"{}\", due to error: \"{}\"",
+                    input, err
+                );
+                exit(1);
+            }
+        })
         .map(|line| {
             let parse_result = Integer::parse_radix(line, 16).unwrap();
             Integer::from(parse_result)
