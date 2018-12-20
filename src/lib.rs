@@ -178,10 +178,9 @@ pub fn compute(moduli: &Vec<Integer>) -> Result<Vec<Option<Integer>>, ComputeErr
 
     let gcds = compute_gcds(&unpad_ints(remainders.unwrap(), pad_size), moduli);
 
-    let one = Integer::from(1);
     Ok(gcds
         .into_iter()
-        .map(|gcd| if gcd == one { None } else { Some(gcd) })
+        .map(|gcd| if gcd == 1 { None } else { Some(gcd) })
         .collect())
 }
 
