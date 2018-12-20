@@ -85,11 +85,12 @@ fn compute_remainders(tree: ProductTree) -> Option<Vec<Integer>> {
         .into_iter()
         .enumerate()
         .fold(None, |maybe_parent, (level, current)| {
-            if maybe_parent.is_none() {
-                return Some(current);
-            }
-
-            let parent = maybe_parent.unwrap();
+            let parent = match maybe_parent {
+                None => {
+                    return Some(current);
+                },
+                Some(parent) => parent,
+            };
 
             trace!("computing remainder level {}/{}", level, level_count);
             let remainders = current
