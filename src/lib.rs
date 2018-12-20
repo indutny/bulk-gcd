@@ -43,7 +43,6 @@ extern crate env_logger;
 mod utils;
 
 use rayon::prelude::*;
-use rug::ops::Pow;
 use rug::Integer;
 use utils::*;
 
@@ -110,7 +109,7 @@ fn compute_remainders(tree: ProductTree) -> RemainderResult {
                 .enumerate()
                 .map(|(i, value)| {
                     let parent = &previous_results[i / 2];
-                    let square = Integer::from(value.pow(2));
+                    let square = Integer::from(value.square_ref());
                     parent % square
                 })
                 .collect();
