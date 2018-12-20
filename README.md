@@ -30,13 +30,13 @@ extern crate rug;
 
 use rug::Integer;
 
-let moduli = vec![
+let moduli = [
     Integer::from(15),
     Integer::from(35),
     Integer::from(23),
 ];
 
-let result = bulk_gcd::compute(moduli).unwrap();
+let result = bulk_gcd::compute(&moduli).unwrap();
 
 assert_eq!(result, vec![
     Some(Integer::from(5)),
