@@ -176,10 +176,7 @@ pub fn compute(moduli: &Vec<Integer>) -> Result<Vec<Option<Integer>>, ComputeErr
     let tree = compute_product_tree(padded_moduli);
     let remainders = compute_remainders(tree);
 
-    let gcds = compute_gcds(
-        &unpad_ints(remainders.unwrap(), pad_size),
-        moduli,
-    );
+    let gcds = compute_gcds(&unpad_ints(remainders.unwrap(), pad_size), moduli);
 
     let one = Integer::from(1);
     Ok(gcds
