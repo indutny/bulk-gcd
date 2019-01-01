@@ -44,6 +44,9 @@ mod utils;
 
 use rayon::prelude::*;
 use rug::Integer;
+use std::error::Error;
+use std::fmt;
+use std::fmt::Display;
 use utils::*;
 
 /// Possible computation errors
@@ -52,6 +55,20 @@ pub enum ComputeError {
     /// Returned when `compute()` is called with 0 or 1 moduli
     /// Minimum 2 moduli are required for meaningful operation of the function.
     NotEnoughModuli,
+}
+
+impl Display for ComputeError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ComputeError: {}", self.description())
+    }
+}
+
+impl Error for ComputeError {
+    fn description(&self) -> &str {
+        match self {
+            ComputeError::NotEnoughModuli => "Not enough moduli",
+        }
+    }
 }
 
 struct ProductTree {
