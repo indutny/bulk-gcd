@@ -71,6 +71,8 @@ impl Error for ComputeError {
     }
 }
 
+pub type ComputeResult = Result<Vec<Option<Integer>>, ComputeError>;
+
 struct ProductTree {
     levels: Vec<Vec<Integer>>,
 }
@@ -181,7 +183,7 @@ fn compute_gcds(remainders: &[Integer], moduli: &[Integer]) -> Vec<Integer> {
 /// );
 /// ```
 ///
-pub fn compute(moduli: &[Integer]) -> Result<Vec<Option<Integer>>, ComputeError> {
+pub fn compute(moduli: &[Integer]) -> ComputeResult {
     if moduli.len() < 2 {
         return Err(ComputeError::NotEnoughModuli);
     }
