@@ -86,6 +86,6 @@ fn main() {
     }
 
     result.iter().for_each(|(i, gcd)| {
-        println!("{},{}", i, gcd.to_string_radix(16));
+        println!("{},{}", i, gcd.to_string());
     });
 }
