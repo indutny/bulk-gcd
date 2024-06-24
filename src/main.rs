@@ -86,6 +86,6 @@ fn main() {
     }
 
     result.iter().for_each(|(i, gcd)| {
-        println!("{},{:x}", i, gcd);
+        println!("{},{:x},{:x}", i, gcd, moduli[*i]);
     });
 }
