@@ -82,7 +82,7 @@ fn main() {
 
     if result.is_empty() {
         eprintln!("no results");
-        exit(1);
+        exit(0);
     }
 
     result.iter().for_each(|(i, gcd)| {
