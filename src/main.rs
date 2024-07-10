@@ -16,7 +16,7 @@ use std::process::exit;
 fn main() {
     env_logger::init();
 
-    let matches = App::with_defaults("bulk-gcd")
+    let matches = App::new("bulk-gcd")
         .version(clap::crate_version!())
         .author(clap::crate_authors!("\n"))
         .about("Compute bulk GCD of a list of hex RSA moduli")
@@ -86,6 +86,6 @@ fn main() {
     }
 
     result.iter().for_each(|(i, gcd)| {
-        println!("{},{}", i, gcd.to_string());
+        println!("{},{:x}", i, gcd);
     });
 }
