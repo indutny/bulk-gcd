@@ -43,10 +43,12 @@ extern crate env_logger;
 mod utils;
 
 use rayon::prelude::*;
+use rug::integer::IntegerExt64;
 use rug::Integer;
 use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
+use rug::ops::MulFrom;
 use utils::*;
 
 /// Possible computation errors
@@ -59,7 +61,7 @@ pub enum ComputeError {
 
 impl Display for ComputeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ComputeError: {}", self)
+        write!(f, "ComputeError")
     }
 }
 
@@ -73,58 +75,82 @@ impl Error for ComputeError {
 
 pub type ComputeResult = Result<Vec<Option<Integer>>, ComputeError>;
 
-struct ProductTree {
-    levels: Vec<Vec<Integer>>,
+fn get_bounds(list: &[Integer]) -> (u64, u64) {
+    let min = list
+        .iter()
+        .fold(u64::MAX, |acc, value| u64::min(acc, value.signed_bits_64()));
+    let max = list
+        .iter()
+        .fold(u64::MIN, |acc, value| u64::max(acc, value.signed_bits_64()));
+    (min, max)
 }
 
-fn compute_product_tree(moduli: Vec<Integer>) -> ProductTree {
-    // Root
-    if moduli.len() == 1 {
-        return ProductTree {
-            levels: vec![moduli],
+fn compute_products(mut moduli: Vec<Integer>, len: usize) -> Vec<Integer> {
+    while moduli.len() > len {
+        let (min, max) = get_bounds(&moduli);
+        trace!(
+            "computing products {} (min={}/max={})",
+            moduli.len(),
+            min,
+            max
+        );
+
+        // See pad_ints() in utils.rs
+        // The list is sorted and the second half is reversed so that the
+        // smallest moduli is at [0] and the largest is at [half]
+        let half = moduli.len() / 2;
+        let (left, right) = moduli.split_at_mut(half);
+
+        left.par_iter_mut()
+            .zip(right.par_iter_mut())
+            .for_each(|(small, big)| small.mul_from(std::mem::take(big)));
+        moduli.truncate(half);
+    }
+    moduli
+}
+
+fn compute_remainders(moduli: Vec<Integer>) -> Vec<Integer> {
+    let mut pre_last = Some(compute_products(moduli.clone(), 2));
+    let mut remainders = compute_products(pre_last.as_ref().unwrap().clone(), 1);
+
+    let mut depth = 2;
+    while depth <= moduli.len() {
+        let mut current = pre_last
+            .take()
+            .unwrap_or_else(|| compute_products(moduli.clone(), depth));
+        depth *= 2;
+
+        let (min, max) = get_bounds(&current);
+        trace!(
+            "computing remainder level {} (min={}, max={})",
+            depth,
+            min,
+            max
+        );
+
+        let compute = |(i, value): (usize, &mut Integer)| {
+            // value = remainders[i / 2] % (value ** 2)
+            let parent = &remainders[i % remainders.len()];
+
+            // Don't compute square if the divisor is bigger than the divisor
+            if value.signed_bits_64() * 2 > parent.signed_bits_64() {
+                value.clone_from(parent);
+            } else {
+                value.square_mut();
+                value.modulo_from(parent);
+            }
         };
+
+        // First levels use most memory so don't par_iter yet
+        if current.len() <= 32 {
+            current.iter_mut().enumerate().for_each(compute);
+        } else {
+            current.par_iter_mut().enumerate().for_each(compute);
+        }
+        remainders = current;
     }
 
-    // Node
-    let level = (0..(moduli.len() / 2))
-        .into_par_iter()
-        .map(|i| Integer::from(&moduli[i * 2] * &moduli[i * 2 + 1]))
-        .collect();
-
-    let mut res = compute_product_tree(level);
-    res.levels.push(moduli);
-    res
-}
-
-fn compute_remainders(tree: ProductTree) -> Option<Vec<Integer>> {
-    let level_count = tree.levels.len() - 1;
-    trace!("computing remainders for {} levels", level_count);
-
-    tree.levels
-        .into_iter()
-        .enumerate()
-        .fold(None, |maybe_parent, (level, current)| {
-            let parent = match maybe_parent {
-                None => {
-                    return Some(current);
-                }
-                Some(parent) => parent,
-            };
-
-            trace!("computing remainder level {}/{}", level, level_count);
-            let remainders = current
-                .into_par_iter()
-                .enumerate()
-                .map(|(i, mut value)| {
-                    // value = parent[i / 2] % (value ** 2)
-                    value.square_mut();
-
-                    &parent[i / 2] % value
-                })
-                .collect();
-
-            Some(remainders)
-        })
+    remainders
 }
 
 fn compute_gcds(remainders: &[Integer], moduli: &[Integer]) -> Vec<Integer> {
@@ -189,16 +215,17 @@ pub fn compute(moduli: &[Integer]) -> ComputeResult {
     }
 
     // Pad to the power-of-two len
-    let (padded_moduli, pad_size) = pad_ints(moduli.to_vec());
-    trace!("added {} padding to moduli", pad_size);
+    let (padded_moduli, original_indices) = pad_ints(moduli.to_vec());
+    trace!("padded to {}", padded_moduli.len());
 
     trace!("computing product tree");
-    let tree = compute_product_tree(padded_moduli);
-    let remainders = compute_remainders(tree);
+    let remainders = compute_remainders(padded_moduli.clone());
 
-    let gcds = compute_gcds(&unpad_ints(remainders.unwrap(), pad_size), moduli);
+    let gcds = compute_gcds(&remainders, &padded_moduli);
 
-    Ok(gcds
+    let unpadded_gcds = unpad_ints(gcds, original_indices, moduli.len());
+
+    Ok(unpadded_gcds
         .into_iter()
         .map(|gcd| if gcd == 1 { None } else { Some(gcd) })
         .collect())

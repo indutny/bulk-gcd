@@ -34,7 +34,7 @@ fn main() {
     let input = matches.value_of("INPUT").unwrap();
     trace!("opening file \"{}\"", &input);
 
-    let reader = match File::open(&input) {
+    let reader = match File::open(input) {
         Ok(f) => BufReader::new(f),
         Err(err) => {
             eprintln!("Failed to open \"{}\", due to error: \"{}\"", input, err);
@@ -68,16 +68,11 @@ fn main() {
         })
         .collect();
 
-    trace!("computing gcd on {} moduli", moduli.len());
-
     let result: Vec<(usize, Integer)> = bulk_gcd::compute(&moduli)
         .unwrap()
         .into_iter()
         .enumerate()
-        .filter_map(|(i, opt)| match opt {
-            Some(gcd) => Some((i, gcd)),
-            None => None,
-        })
+        .filter_map(|(i, opt)| opt.map(|gcd| (i, gcd)))
         .collect();
 
     if result.is_empty() {
@@ -85,7 +80,7 @@ fn main() {
         exit(0);
     }
 
-    result.iter().for_each(|(i, gcd)| {
-        println!("{},{:x},{:x}", i, gcd, moduli[*i]);
-    });
+    for (i, gcd) in result {
+        println!("i={} divisor={:x} moduli={:x}", i, gcd, moduli[i]);
+    }
 }
