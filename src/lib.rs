@@ -155,7 +155,7 @@ fn compute_remainders(moduli: Vec<Integer>, cache_dir: Option<&Path>) -> Vec<Int
         );
 
         let compute = |(i, value): (usize, &mut Integer)| {
-            // value = remainders[i / 2] % (value ** 2)
+            // value = remainders[i % remainders.len()] % (value ** 2)
             let parent = &remainders[i % remainders.len()];
 
             // Don't compute square if the divisor is bigger than the divisor
