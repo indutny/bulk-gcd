@@ -8,12 +8,10 @@ extern crate env_logger;
 
 use clap::{App, Arg};
 use rug::Integer;
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::BufReader;
+use std::path::{Path, PathBuf};
 use std::process::exit;
 
-fn main() {
+fn main() -> std::io::Result<()> {
     env_logger::init();
 
     let matches = App::new("bulk-gcd")
@@ -34,41 +32,15 @@ fn main() {
     let input = matches.value_of("INPUT").unwrap();
     trace!("opening file \"{}\"", &input);
 
-    let reader = match File::open(input) {
-        Ok(f) => BufReader::new(f),
-        Err(err) => {
-            eprintln!("Failed to open \"{}\", due to error: \"{}\"", input, err);
-            exit(1);
-        }
-    };
+    let moduli = bulk_gcd::fs::read_from(Path::new(input))?;
 
-    trace!("reading and parsing moduli");
+    let cache_dir: Option<PathBuf> = std::env::var_os("CACHE_DIR").map(PathBuf::from);
 
-    let moduli: Vec<Integer> = reader
-        .lines()
-        .filter_map(|maybe_line| match maybe_line {
-            Ok(line) => {
-                if line.is_empty() {
-                    None
-                } else {
-                    Some(line)
-                }
-            }
-            Err(err) => {
-                eprintln!(
-                    "Failed to read line from \"{}\", due to error: \"{}\"",
-                    input, err
-                );
-                exit(1);
-            }
-        })
-        .map(|line| {
-            let parse_result = Integer::parse_radix(line, 16).unwrap();
-            Integer::from(parse_result)
-        })
-        .collect();
+    if let Some(ref dir) = cache_dir {
+        std::fs::create_dir_all(dir)?;
+    }
 
-    let result: Vec<(usize, Integer)> = bulk_gcd::compute(&moduli)
+    let result: Vec<(usize, Integer)> = bulk_gcd::compute(&moduli, cache_dir.as_deref())
         .unwrap()
         .into_iter()
         .enumerate()
@@ -83,4 +55,5 @@ fn main() {
     for (i, gcd) in result {
         println!("i={} divisor={:x} moduli={:x}", i, gcd, moduli[i]);
     }
+    Ok(())
 }

@@ -19,7 +19,7 @@
 //!     Integer::from(23),
 //! ];
 //!
-//! let result = bulk_gcd::compute(&moduli).unwrap();
+//! let result = bulk_gcd::compute(&moduli, None).unwrap();
 //!
 //! assert_eq!(
 //!     result,
@@ -33,6 +33,7 @@
 //!
 //! [bernstein]: https://cr.yp.to/factorization/smoothparts-20040510.pdf
 //! [that paper]: https://factorable.net/weakkeys12.conference.pdf
+extern crate byteorder;
 extern crate rayon;
 extern crate rug;
 
@@ -40,15 +41,17 @@ extern crate rug;
 extern crate log;
 extern crate env_logger;
 
+pub mod fs;
 mod utils;
 
 use rayon::prelude::*;
 use rug::integer::IntegerExt64;
+use rug::ops::MulFrom;
 use rug::Integer;
 use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
-use rug::ops::MulFrom;
+use std::path::Path;
 use utils::*;
 
 /// Possible computation errors
@@ -85,15 +88,22 @@ fn get_bounds(list: &[Integer]) -> (u64, u64) {
     (min, max)
 }
 
-fn compute_products(mut moduli: Vec<Integer>, len: usize) -> Vec<Integer> {
-    while moduli.len() > len {
-        let (min, max) = get_bounds(&moduli);
-        trace!(
-            "computing products {} (min={}/max={})",
-            moduli.len(),
-            min,
-            max
-        );
+fn compute_products(
+    mut moduli: Vec<Integer>,
+    target_len: usize,
+    cache_dir: Option<&Path>,
+) -> Vec<Integer> {
+    if let Some(cache_dir) = cache_dir {
+        let path = cache_dir.join(format!("{}.bin", target_len));
+        trace!("trying reading products from {}", path.display());
+
+        if let Ok(result) = fs::read_from(path.as_path()) {
+            return result;
+        }
+    }
+
+    while moduli.len() > target_len {
+        trace!("computing products {} -> {}", moduli.len(), target_len);
 
         // See pad_ints() in utils.rs
         // The list is sorted and the second half is reversed so that the
@@ -105,20 +115,36 @@ fn compute_products(mut moduli: Vec<Integer>, len: usize) -> Vec<Integer> {
             .zip(right.par_iter_mut())
             .for_each(|(small, big)| small.mul_from(std::mem::take(big)));
         moduli.truncate(half);
+
+        if let Some(cache_dir) = cache_dir {
+            if moduli.len() <= target_len {
+                continue;
+            }
+
+            let (min, max) = get_bounds(&moduli);
+
+            let path = cache_dir.join(format!("{}.bin", moduli.len()));
+            trace!(
+                "writing products (min={}, max={}) to {}",
+                min,
+                max,
+                path.display()
+            );
+            fs::write_to(path.as_path(), &moduli).unwrap();
+        }
     }
     moduli
 }
 
-fn compute_remainders(moduli: Vec<Integer>) -> Vec<Integer> {
-    let mut pre_last = Some(compute_products(moduli.clone(), 2));
-    let mut remainders = compute_products(pre_last.as_ref().unwrap().clone(), 1);
+fn compute_remainders(moduli: Vec<Integer>, cache_dir: Option<&Path>) -> Vec<Integer> {
+    let mut pre_last = Some(compute_products(moduli.clone(), 2, cache_dir));
+    let mut remainders = compute_products(pre_last.clone().unwrap(), 1, cache_dir);
 
     let mut depth = 2;
     while depth <= moduli.len() {
         let mut current = pre_last
             .take()
-            .unwrap_or_else(|| compute_products(moduli.clone(), depth));
-        depth *= 2;
+            .unwrap_or_else(|| compute_products(moduli.clone(), depth, cache_dir));
 
         let (min, max) = get_bounds(&current);
         trace!(
@@ -147,7 +173,9 @@ fn compute_remainders(moduli: Vec<Integer>) -> Vec<Integer> {
         } else {
             current.par_iter_mut().enumerate().for_each(compute);
         }
+
         remainders = current;
+        depth *= 2;
     }
 
     remainders
@@ -181,7 +209,7 @@ fn compute_gcds(remainders: &[Integer], moduli: &[Integer]) -> Vec<Integer> {
 ///     Integer::from(49),
 /// ];
 ///
-/// let result = bulk_gcd::compute(&moduli).unwrap();
+/// let result = bulk_gcd::compute(&moduli, None).unwrap();
 ///
 /// assert_eq!(
 ///     result,
@@ -204,22 +232,23 @@ fn compute_gcds(remainders: &[Integer], moduli: &[Integer]) -> Vec<Integer> {
 /// use rug::Integer;
 ///
 /// assert_eq!(
-///     bulk_gcd::compute(&[]).unwrap_err(),
+///     bulk_gcd::compute(&[], None).unwrap_err(),
 ///     bulk_gcd::ComputeError::NotEnoughModuli
 /// );
 /// ```
 ///
-pub fn compute(moduli: &[Integer]) -> ComputeResult {
+pub fn compute(moduli: &[Integer], cache_dir: Option<&Path>) -> ComputeResult {
     if moduli.len() < 2 {
         return Err(ComputeError::NotEnoughModuli);
     }
+
+    trace!("starting with {} moduli", moduli.len());
 
     // Pad to the power-of-two len
     let (padded_moduli, original_indices) = pad_ints(moduli.to_vec());
     trace!("padded to {}", padded_moduli.len());
 
-    trace!("computing product tree");
-    let remainders = compute_remainders(padded_moduli.clone());
+    let remainders = compute_remainders(padded_moduli.clone(), cache_dir);
 
     let gcds = compute_gcds(&remainders, &padded_moduli);
 
@@ -237,19 +266,19 @@ mod tests {
 
     #[test]
     fn it_should_fail_on_zero_moduli() {
-        assert!(compute(&[]).is_err());
+        assert!(compute(&[], None).is_err());
     }
 
     #[test]
     fn it_should_fail_on_single_moduli() {
-        assert!(compute(&[Integer::new()]).is_err());
+        assert!(compute(&[Integer::new()], None).is_err());
     }
 
     #[test]
     fn it_should_return_gcd_of_two_moduli() {
         let moduli = [Integer::from(6), Integer::from(15)];
 
-        let result = compute(&moduli).unwrap();
+        let result = compute(&moduli, None).unwrap();
         assert_eq!(
             result,
             vec![Some(Integer::from(3)), Some(Integer::from(3)),]
@@ -267,7 +296,7 @@ mod tests {
             Integer::from(131 * 151),
         ];
 
-        let result = compute(&moduli).unwrap();
+        let result = compute(&moduli, None).unwrap();
 
         assert_eq!(
             result,

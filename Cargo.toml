@@ -11,6 +11,7 @@ readme = "README.md"
 exclude = [".travis.yml"]
 
 [dependencies]
+byteorder = "1.5.0"
 clap = "^2.32.0"
 env_logger = "^0.6.0"
 log = "^0.4.6"
